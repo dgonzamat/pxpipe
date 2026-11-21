@@ -169,6 +169,20 @@ describe('ticket-style codes and occurrence counts', () => {
     expect(hit!.count).toBe(5);
   });
 
+  it('splits on literal \\n/\\t/\\r escapes so JSON string bodies do not mint fake identifiers', () => {
+    // Raw JSON source keeps newlines inside string values as the two chars `\n`.
+    // Splitting only on real whitespace turned `...radio.\n\nJohansson` into the
+    // pseudo-camelCase token `nJohansson`, and `\n/srv/app/main.ts` into `n/srv/app/main.ts`.
+    const text = '{"body": "Pilot radioed IR-12-54.\\n\\nJohansson saw it.\\nThe log \\n/srv/app/main.ts at 13.77\\tdone"}';
+    const toks = extractFactSheetTokens(text);
+    expect(toks).not.toContain('nJohansson');
+    expect(toks).not.toContain('nThe');
+    expect(toks).toContain('IR-12-54');
+    expect(toks).toContain('/srv/app/main.ts');
+    expect(toks).toContain('13.77');
+    expect(toks.some((t) => /^n[A-Z\/]/.test(t))).toBe(false);
+  });
+
   it('keeps camelCase identifiers that models confabulate off dense images', () => {
     const sheet = factSheetText('renamed the field to tokenLedgerShard and port 47821');
     expect(sheet).toContain('tokenLedgerShard');
