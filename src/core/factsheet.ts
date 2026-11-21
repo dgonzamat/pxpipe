@@ -141,7 +141,10 @@ export interface FactSheetEntry {
 export function extractFactSheetEntries(text: string): FactSheetEntry[] {
   const scan = text.length > MAX_SCAN ? text.slice(0, MAX_SCAN) : text;
   const counts = new Map<string, number>();
-  for (const chunk of scan.split(/\s+/)) {
+  // Also split on literal `\n`/`\t`/`\r` escapes: raw JSON or log source keeps string
+  // newlines as those two chars, and without this `\nJohansson` became the fake camelCase
+  // token `nJohansson` (and `\n/srv/x.ts` the path `n/srv/x.ts`), crowding the budget.
+  for (const chunk of scan.split(/\s+|\\[nrt]/)) {
     if (chunk.length < MIN_LEN || chunk.length > MAX_CHUNK) continue;
     // Offset-level dedup WITHIN this chunk: two patterns matching the identical
     // token at the same position must count once. Keyed by token+start offset.
